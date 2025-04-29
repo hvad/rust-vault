@@ -50,6 +50,8 @@ cargo run -- -c config.toml
 
 - **Add an Account**: You will be prompted to enter the account name and password.
 - **Display Accounts and Passwords**: Lists all registered accounts along with their passwords.
+- **Search**: You will search for an accounts along with their passwords.
+- **Delete**: You will delete for an accounts along with their passwords.
 - **Quit**: Saves the data and exits the application.
 
 ## Security Note
