@@ -55,12 +55,16 @@ fn main() -> io::Result<()> {
         println!("\nOptions:");
         println!("1. Add an account");
         println!("2. Display accounts and passwords");
-        println!("3. Quit");
+        println!("3. Search an account");
+        println!("4. Delete an account");
+        println!("5. Quit");
 
         match prompt("Choose an option:").as_str() {
             "1" => add_account(&mut passwords),
             "2" => list_accounts(&passwords),
-            "3" => {
+            "3" => search_account(&passwords),
+            "4" => delete_account(&mut passwords),
+            "5" => {
                 save_passwords(&passwords, &master_password, &config.data_file).expect("Error saving data");
                 println!("Data saved. Goodbye!");
                 break;
@@ -70,6 +74,25 @@ fn main() -> io::Result<()> {
     }
 
     Ok(())
+}
+
+fn search_account(passwords: &HashMap<String, String>) {
+    let account = prompt("Enter the account name to search for:");
+
+    match passwords.get(&account) {
+        Some(password) => println!("Account found! Password: {}", password),
+        None => println!("Account not found."),
+    }
+}
+
+fn delete_account(passwords: &mut HashMap<String, String>) {
+    let account = prompt("Enter the account name to delete:");
+
+    if passwords.remove(&account).is_some() {
+        println!("Account '{}' deleted successfully!", account);
+    } else {
+        println!("Account '{}' not found.", account);
+    }
 }
 
 fn prompt(message: &str) -> String {
