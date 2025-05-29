@@ -14,14 +14,21 @@ struct Config {
     data_file: String,
 }
 
+// Structure to store login and password together
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct AccountDetails {
+    login: String,
+    password: String,
+}
+
 #[derive(Serialize, Deserialize)]
 struct Passwords {
-    accounts: HashMap<String, String>,
+    accounts: HashMap<String, AccountDetails>, 
 }
 
 #[derive(Parser)]
 struct Cli {
-    /// Path to the configuration file
+    // Path to the configuration file
     #[clap(short, long, default_value = "config.toml")]
     config: String,
 }
@@ -76,22 +83,22 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
-fn search_account(passwords: &HashMap<String, String>) {
-    let account = prompt("Enter the account name to search for:");
+fn search_account(passwords: &HashMap<String, AccountDetails>) { 
+    let app_name = prompt("Enter the application name to search for:");
 
-    match passwords.get(&account) {
-        Some(password) => println!("Account found! Password: {}", password),
+    match passwords.get(&app_name) {
+        Some(details) => println!("Account found! Login: {}, Password: {}", details.login, details.password),
         None => println!("Account not found."),
     }
 }
 
-fn delete_account(passwords: &mut HashMap<String, String>) {
-    let account = prompt("Enter the account name to delete:");
+fn delete_account(passwords: &mut HashMap<String, AccountDetails>) { 
+    let app_name = prompt("Enter the application name to delete:");
 
-    if passwords.remove(&account).is_some() {
-        println!("Account '{}' deleted successfully!", account);
+    if passwords.remove(&app_name).is_some() {
+        println!("Account '{}' deleted successfully!", app_name);
     } else {
-        println!("Account '{}' not found.", account);
+        println!("Account '{}' not found.", app_name);
     }
 }
 
@@ -102,26 +109,28 @@ fn prompt(message: &str) -> String {
     input.trim().to_string()
 }
 
-fn add_account(passwords: &mut HashMap<String, String>) {
-    let account = prompt("Enter account name:");
+fn add_account(passwords: &mut HashMap<String, AccountDetails>) { 
+    let app_name = prompt("Enter application name:");
+    let login = prompt("Enter login:");
     let password = prompt("Enter password:");
 
-    passwords.insert(account, password);
+    let details = AccountDetails { login, password };
+    passwords.insert(app_name, details);
     println!("Account added successfully!");
 }
 
-fn list_accounts(passwords: &HashMap<String, String>) {
+fn list_accounts(passwords: &HashMap<String, AccountDetails>) { 
     if passwords.is_empty() {
         println!("No accounts registered.");
     } else {
         println!("Registered accounts:");
-        for (account, password) in passwords {
-            println!("- Account: {}, Password: {}", account, password);
+        for (app_name, details) in passwords {
+            println!("- Application: {}, Login: {}, Password: {}", app_name, details.login, details.password);
         }
     }
 }
 
-fn save_passwords(passwords: &HashMap<String, String>, master_password: &str, data_file: &str) -> Result<(), String> {
+fn save_passwords(passwords: &HashMap<String, AccountDetails>, master_password: &str, data_file: &str) -> Result<(), String> { 
     let serialized = serde_json::to_string(&Passwords { accounts: passwords.clone() })
         .map_err(|e| format!("Serialization error: {}", e))?;
     let key = derive_key(master_password);
@@ -135,7 +144,7 @@ fn save_passwords(passwords: &HashMap<String, String>, master_password: &str, da
     Ok(())
 }
 
-fn load_passwords(master_password: &str, data_file: &str) -> Result<HashMap<String, String>, String> {
+fn load_passwords(master_password: &str, data_file: &str) -> Result<HashMap<String, AccountDetails>, String> { 
     if !Path::new(data_file).exists() {
         return Err("Data file not found.".to_string());
     }
