@@ -40,7 +40,7 @@ data_file = "passwords.enc"
 Run the application with the following command:
 
 ```
-cargo run -- -c config.toml
+./rust-vault-linux-x86_64  -c config.toml
 ```
 
 ## Options
