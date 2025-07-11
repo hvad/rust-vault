@@ -1,13 +1,13 @@
-use std::collections::HashMap;
-use std::fs::{File, read_to_string};
-use std::io::{self, Write, Read};
-use std::path::Path;
 use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes256Gcm, Nonce};
-use sha2::{Digest, Sha256};
-use serde::{Serialize, Deserialize};
-use toml::de::from_str;
 use clap::Parser;
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use std::collections::HashMap;
+use std::fs::{read_to_string, File};
+use std::io::{self, Read, Write};
+use std::path::Path;
+use toml::de::from_str;
 
 #[derive(Serialize, Deserialize)]
 struct Config {
@@ -23,7 +23,7 @@ struct AccountDetails {
 
 #[derive(Serialize, Deserialize)]
 struct Passwords {
-    accounts: HashMap<String, AccountDetails>, 
+    accounts: HashMap<String, AccountDetails>,
 }
 
 #[derive(Parser)]
@@ -34,8 +34,10 @@ struct Cli {
 }
 
 fn load_config(config_path: &str) -> Result<Config, String> {
-    let config_str = read_to_string(config_path).map_err(|e| format!("Error reading config file: {}", e))?;
-    let config: Config = from_str(&config_str).map_err(|e| format!("Error parsing config file: {}", e))?;
+    let config_str =
+        read_to_string(config_path).map_err(|e| format!("Error reading config file: {}", e))?;
+    let config: Config =
+        from_str(&config_str).map_err(|e| format!("Error parsing config file: {}", e))?;
     Ok(config)
 }
 
@@ -72,7 +74,8 @@ fn main() -> io::Result<()> {
             "3" => search_account(&passwords),
             "4" => delete_account(&mut passwords),
             "5" => {
-                save_passwords(&passwords, &master_password, &config.data_file).expect("Error saving data");
+                save_passwords(&passwords, &master_password, &config.data_file)
+                    .expect("Error saving data");
                 println!("Data saved. Goodbye!");
                 break;
             }
@@ -83,16 +86,19 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
-fn search_account(passwords: &HashMap<String, AccountDetails>) { 
+fn search_account(passwords: &HashMap<String, AccountDetails>) {
     let app_name = prompt("Enter the application name to search for:");
 
     match passwords.get(&app_name) {
-        Some(details) => println!("Account found! Login: {}, Password: {}", details.login, details.password),
+        Some(details) => println!(
+            "Account found! Login: {}, Password: {}",
+            details.login, details.password
+        ),
         None => println!("Account not found."),
     }
 }
 
-fn delete_account(passwords: &mut HashMap<String, AccountDetails>) { 
+fn delete_account(passwords: &mut HashMap<String, AccountDetails>) {
     let app_name = prompt("Enter the application name to delete:");
 
     if passwords.remove(&app_name).is_some() {
@@ -109,7 +115,7 @@ fn prompt(message: &str) -> String {
     input.trim().to_string()
 }
 
-fn add_account(passwords: &mut HashMap<String, AccountDetails>) { 
+fn add_account(passwords: &mut HashMap<String, AccountDetails>) {
     let app_name = prompt("Enter application name:");
     let login = prompt("Enter login:");
     let password = prompt("Enter password:");
@@ -119,47 +125,63 @@ fn add_account(passwords: &mut HashMap<String, AccountDetails>) {
     println!("Account added successfully!");
 }
 
-fn list_accounts(passwords: &HashMap<String, AccountDetails>) { 
+fn list_accounts(passwords: &HashMap<String, AccountDetails>) {
     if passwords.is_empty() {
         println!("No accounts registered.");
     } else {
         println!("Registered accounts:");
         for (app_name, details) in passwords {
-            println!("- Application: {}, Login: {}, Password: {}", app_name, details.login, details.password);
+            println!(
+                "- Application: {}, Login: {}, Password: {}",
+                app_name, details.login, details.password
+            );
         }
     }
 }
 
-fn save_passwords(passwords: &HashMap<String, AccountDetails>, master_password: &str, data_file: &str) -> Result<(), String> { 
-    let serialized = serde_json::to_string(&Passwords { accounts: passwords.clone() })
-        .map_err(|e| format!("Serialization error: {}", e))?;
+fn save_passwords(
+    passwords: &HashMap<String, AccountDetails>,
+    master_password: &str,
+    data_file: &str,
+) -> Result<(), String> {
+    let serialized = serde_json::to_string(&Passwords {
+        accounts: passwords.clone(),
+    })
+    .map_err(|e| format!("Serialization error: {}", e))?;
     let key = derive_key(master_password);
     let cipher = Aes256Gcm::new(&key);
 
-    let ciphertext = cipher.encrypt(Nonce::from_slice(b"unique_nonce"), serialized.as_bytes())
+    let ciphertext = cipher
+        .encrypt(Nonce::from_slice(b"unique_nonce"), serialized.as_bytes())
         .map_err(|e| format!("Encryption error: {:?}", e))?;
 
     let mut file = File::create(data_file).map_err(|e| format!("File creation error: {}", e))?;
-    file.write_all(&ciphertext).map_err(|e| format!("File write error: {}", e))?;
+    file.write_all(&ciphertext)
+        .map_err(|e| format!("File write error: {}", e))?;
     Ok(())
 }
 
-fn load_passwords(master_password: &str, data_file: &str) -> Result<HashMap<String, AccountDetails>, String> { 
+fn load_passwords(
+    master_password: &str,
+    data_file: &str,
+) -> Result<HashMap<String, AccountDetails>, String> {
     if !Path::new(data_file).exists() {
         return Err("Data file not found.".to_string());
     }
 
     let mut file = File::open(data_file).map_err(|e| format!("File open error: {}", e))?;
     let mut ciphertext = Vec::new();
-    file.read_to_end(&mut ciphertext).map_err(|e| format!("File read error: {}", e))?;
+    file.read_to_end(&mut ciphertext)
+        .map_err(|e| format!("File read error: {}", e))?;
 
     let key = derive_key(master_password);
     let cipher = Aes256Gcm::new(&key);
 
-    let plaintext = cipher.decrypt(Nonce::from_slice(b"unique_nonce"), ciphertext.as_ref())
+    let plaintext = cipher
+        .decrypt(Nonce::from_slice(b"unique_nonce"), ciphertext.as_ref())
         .map_err(|e| format!("Decryption error: {:?}", e))?;
-    let passwords: Passwords = serde_json::from_slice(&plaintext)
-        .map_err(|e| format!("Deserialization error: {}", e))?;
+    let passwords: Passwords =
+        serde_json::from_slice(&plaintext).map_err(|e| format!("Deserialization error: {}", e))?;
 
     Ok(passwords.accounts)
 }
